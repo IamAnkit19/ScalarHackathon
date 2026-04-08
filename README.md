@@ -163,7 +163,7 @@ Read email content
 Predict label and priority
 Run baseline:
 export ANTHROPIC_API_KEY=your_key
-python baseline.py
+python inference.py
 🛠️ Setup Instructions
 1. Clone Repository
 git clone <repo-url>
