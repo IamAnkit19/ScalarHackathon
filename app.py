@@ -32,12 +32,14 @@ def index():
 
 
 @app.route("/api/reset", methods=["POST"])
+@app.route("/reset", methods=["POST"])
 def reset():
     env.reset()
     return jsonify({"ok": True, "state": env.get_state()})
 
 
 @app.route("/api/state")
+@app.route("/state")
 def state():
     return jsonify(env.get_state())
 
@@ -56,6 +58,7 @@ def check():
 
 
 @app.route("/api/step", methods=["POST"])
+@app.route("/step", methods=["POST"])
 def step():
     """
     Process ONE email step.
