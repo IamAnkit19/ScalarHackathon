@@ -1,0 +1,39 @@
+name: "Email Triage Environment"
+version: "1.0.0"
+description: "A complete OpenEnv-compliant real-world simulation environment where an AI agent learns to manage and classify emails efficiently."
+action_space:
+  type: "dict"
+  description: >
+    For easy/medium tasks, the agent provides "label". 
+    For hard tasks, the agent provides "category", "priority", and "action".
+  fields:
+    label:
+      type: "categorical"
+      choices: ["spam", "important", "promotion", "social", "work", "personal"]
+    category:
+      type: "categorical"
+      choices: ["spam", "important", "promotion", "social", "work", "personal"]
+    priority:
+      type: "categorical"
+      choices: [1, 2, 3, 4, 5]
+    action:
+      type: "categorical"
+      choices: ["reply", "archive", "delete", "forward"]
+observation_space:
+  type: "dict"
+  fields:
+    id: "integer"
+    sender: "string"
+    subject: "string"
+    body: "string"
+reward:
+  type: "dense"
+  description: "Continuous reward from -0.3 up to 1.0 based on classification accuracy, priority, and action."
+  range: [-1.0, 1.0]
+tasks:
+  - id: "easy_eval"
+    level: "easy"
+  - id: "medium_eval"
+    level: "medium"
+  - id: "hard_eval"
+    level: "hard"

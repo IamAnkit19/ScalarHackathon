@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Email Classifier — RL Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo-block">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>Email Classifier Agent</h1>
+        <p>Reinforcement Learning · State-Based Environment · Reward Function</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">idle</span>
+      </div>
+      <button class="btn btn-primary" id="run-btn">
+        <svg class="btn-icon" viewBox="0 0 13 13" fill="none"><path d="M2.5 2L10.5 6.5L2.5 11V2Z" fill="currentColor"/></svg>
+        Run Agent
+      </button>
+      <button class="btn" id="reset-btn">
+        <svg class="btn-icon" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 1 1 2.5 4M2.5 4V1.5M2.5 4H5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- LEVEL SELECTOR -->
+  <div class="level-bar">
+    <button class="level-btn active" data-level="easy">
+      <span class="diff-dot d-easy"></span> Easy · Spam Detect
+    </button>
+    <button class="level-btn" data-level="medium">
+      <span class="diff-dot d-med"></span> Medium · Category
+    </button>
+    <button class="level-btn" data-level="hard">
+      <span class="diff-dot d-hard"></span> Hard · Priority + Action
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-track"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+
+  <!-- METRICS -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-label">Emails Processed</div>
+      <div class="metric-value" id="m-processed">0 / 5</div>
+      <div class="metric-sub">of current episode</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total Reward</div>
+      <div class="metric-value" id="m-score">0.0</div>
+      <div class="reward-history" id="reward-history"></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Accuracy</div>
+      <div class="metric-value" id="m-acc">—</div>
+      <div class="metric-sub">category correct</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Last Reward</div>
+      <div class="metric-value" id="m-last">—</div>
+      <div class="metric-sub" id="m-last-sub">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Agent State</div>
+      <div class="metric-value amber" id="m-state">RESET</div>
+      <div class="metric-sub" id="m-state-sub">awaiting episode</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot"></span> Inbox · Observation Space</div>
+        <span style="font-size:11px;color:var(--text3)">5 emails</span>
+      </div>
+      <div class="panel-body" id="inbox-panel">
+        {% for email in emails %}
+        <div class="email-card" id="ec-{{ email.id }}" data-id="{{ email.id }}">
+          <div class="email-top">
+            <span class="email-sender">{{ email.sender }}</span>
+            <span class="email-num">#{{ email.id }}</span>
+          </div>
+          <div class="email-subject">{{ email.subject }}</div>
+          <div class="email-body-preview">{{ email.body }}</div>
+          <div class="email-footer" id="ef-{{ email.id }}">
+            <span class="tag tag-pending">pending</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot"></span> Agent Output · Action Space</div>
+        <span style="font-size:11px;color:var(--text3)" id="result-count">0 classified</span>
+      </div>
+      <div class="panel-body" id="results-panel">
+        <div class="empty-state">
+          <div class="empty-icon">🤖</div>
+          <div>Run agent to begin classification</div>
+          <div style="font-size:11px;color:var(--text3)">Agent will process all 5 emails</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Category Distribution</div>
+      <div class="bar-chart">
+        <div class="bar-row"><span class="bar-lbl">Spam</span><div class="bar-track"><div class="bar-fill" id="bar-spam" style="width:0%;background:#ef4444"></div></div><span class="bar-val" id="bv-spam">0</span></div>
+        <div class="bar-row"><span class="bar-lbl">Work</span><div class="bar-track"><div class="bar-fill" id="bar-work" style="width:0%;background:#60a5fa"></div></div><span class="bar-val" id="bv-work">0</span></div>
+        <div class="bar-row"><span class="bar-lbl">Personal</span><div class="bar-track"><div class="bar-fill" id="bar-personal" style="width:0%;background:#22c55e"></div></div><span class="bar-val" id="bv-personal">0</span></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Accuracy Donut</div>
+      <div class="pie-wrap">
+        <svg class="donut-svg" width="90" height="90" viewBox="0 0 90 90">
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#1e1e1e" stroke-width="10"/>
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#22c55e" stroke-width="10"
+            stroke-dasharray="220" stroke-dashoffset="220" id="donut-arc"
+            style="transition:stroke-dashoffset .7s ease" stroke-linecap="round"/>
+        </svg>
+        <div class="donut-label">
+          <div class="donut-num" id="donut-pct">0%</div>
+          <div class="donut-sub">Correct</div>
+        </div>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Correct</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Wrong</div>
+      </div>
+    </div>
+
+    <div class="reward-breakdown">
+      <div class="rb-title">Reward Design</div>
+      <div id="rb-rows"></div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-panel">
+    <div class="panel-header">
+      <div class="panel-title"><span class="panel-title-dot"></span> Agent Loop · Step Log</div>
+      <button class="btn" style="padding:4px 10px;font-size:10px" id="clear-log-btn">Clear</button>
+    </div>
+    <div class="log-body" id="log-body">
+      <div class="log-line"><span class="log-ts">--:--:--</span><span class="log-msg">Environment initialized. Select difficulty and run agent.</span></div>
+    </div>
+  </div>
+
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
