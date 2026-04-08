@@ -1,46 +1,79 @@
 import os
-import sys
+import requests
 from dotenv import load_dotenv
-from agents.environment import EmailEnvironment
-from agents.classifier import EmailClassifierAgent
 
-def run_baseline(level: str):
-    env = EmailEnvironment()
-    
-    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    if not key or key == "your_api_key_here":
-        print(f"[{level.upper()}] ERROR: ANTHROPIC_API_KEY not found in .env")
-        return
-        
-    agent = EmailClassifierAgent(api_key=key)
-    env.reset()
-    
-    print(f"\n▶ Running Baseline for Task Level: {level.upper()}")
-    print("-" * 50)
-    
-    while not env.done:
-        email = env.emails[env.step_idx]
-        try:
-            action = agent.classify(email, level)
-        except Exception as e:
-            action = {"label": "error", "reason": str(e)}
-            
-        result = env.step(action, level)
-        
-        correct_str = "✅ Correct" if result["info"]["step_record"]["correct"] else "❌ Wrong"
-        print(f"[{env.step_idx}] Subject: {email['subject'][:30]:<30} | {correct_str}")
-        
-    state = env.get_state()
-    print("-" * 50)
-    print(f"🏁 Final Score for {level.upper()}:  Accuracy: {state['accuracy']:.2f}  |  Total Reward: {state['total_reward']}")
-    print("-" * 50)
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
+MODEL_NAME = os.getenv("MODEL_NAME", "baseline-model")
+
+MAX_STEPS = 5
+SUCCESS_SCORE_THRESHOLD = 0.5
+
+
+def log_start(task):
+    print("[START]", flush=True)
+    print(f"task={task}", flush=True)
+    print("env=email_env", flush=True)
+    print(f"model={MODEL_NAME}", flush=True)
+
+
+def log_step(step, action, reward, done):
+    print("[STEP]", flush=True)
+    print(f"step={step}", flush=True)
+    print(f"action={action}", flush=True)
+    print(f"reward={reward}", flush=True)
+    print(f"done={done}", flush=True)
+
+
+def log_end(success, steps, score, rewards):
+    print("[END]", flush=True)
+    print(f"success={success}", flush=True)
+    print(f"steps={steps}", flush=True)
+    print(f"score={score}", flush=True)
+    print(f"rewards={rewards}", flush=True)
+
+
+def run_task(level):
+    rewards = []
+    steps_taken = 0
+
+    log_start(task=level)
+
+    # reset
+    res = requests.post(f"{BASE_URL}/reset")
+    result = res.json()
+
+    for step in range(1, MAX_STEPS + 1):
+        if result.get("done"):
+            break
+
+        action = {"level": level, "email_index": step - 1}
+
+        res = requests.post(f"{BASE_URL}/step", json=action)
+        result = res.json()
+
+        reward = result.get("reward", 0.0)
+        done = result.get("done", False)
+
+        rewards.append(reward)
+        steps_taken = step
+
+        log_step(step, action, reward, done)
+
+        if done:
+            break
+
+    score = sum(rewards) / len(rewards) if rewards else 0.0
+    success = score >= SUCCESS_SCORE_THRESHOLD
+
+    log_end(success, steps_taken, score, rewards)
+
 
 def main():
     load_dotenv()
-    print("🤖 Starting Baseline OpenEnv Evaluator...")
-    run_baseline("easy")
-    run_baseline("medium")
-    run_baseline("hard")
+    run_task("easy")
+    run_task("medium")
+    run_task("hard")
+
 
 if __name__ == "__main__":
     main()
