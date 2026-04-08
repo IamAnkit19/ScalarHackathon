@@ -1,0 +1,15 @@
+[project]
+name = "openenv-email-env"
+version = "0.1.0"
+description = "OpenEnv Email Classification Environment"
+authors = [
+    { name="Your Name" }
+]
+dependencies = [
+    "flask",
+    "python-dotenv",
+    "requests"
+]
+
+[tool.setuptools]
+packages = ["agents", "data", "utils"]
