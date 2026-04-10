@@ -1,20 +1,31 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
 [project]
 name = "openenv-email-env"
-version = "0.1.0"
-description = "OpenEnv Email Classification Environment"
-authors = [
-    { name="Your Name" }
-]
+version = "1.0.0"
+description = "OpenEnv Email Triage Classification Environment"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
 dependencies = [
-    "flask",
-    "python-dotenv",
-    "requests",
-    "openai",
-    "openenv-core>=0.2.0"
+    "flask>=3.0.0",
+    "openai>=1.14.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "openenv-core>=0.2.0",
 ]
-
-[tool.setuptools]
-packages = ["agents", "data", "utils"]
 
 [project.scripts]
+serve  = "server.app:main"
 server = "server.app:main"
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["agents*", "data*", "utils*", "server*"]
+
+[tool.openenv]
+entry_point = "app:app"
+app_port    = 7860
+sdk         = "docker"

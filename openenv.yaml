@@ -1,39 +1,64 @@
-name: "Email Triage Environment"
+name: email-triage-env
 version: "1.0.0"
-description: "A complete OpenEnv-compliant real-world simulation environment where an AI agent learns to manage and classify emails efficiently."
-action_space:
-  type: "dict"
-  description: >
-    For easy/medium tasks, the agent provides "label". 
-    For hard tasks, the agent provides "category", "priority", and "action".
-  fields:
-    label:
-      type: "categorical"
-      choices: ["spam", "important", "promotion", "social", "work", "personal"]
-    category:
-      type: "categorical"
-      choices: ["spam", "important", "promotion", "social", "work", "personal"]
-    priority:
-      type: "categorical"
-      choices: [1, 2, 3, 4, 5]
-    action:
-      type: "categorical"
-      choices: ["reply", "archive", "delete", "forward"]
-observation_space:
-  type: "dict"
-  fields:
-    id: "integer"
-    sender: "string"
-    subject: "string"
-    body: "string"
-reward:
-  type: "dense"
-  description: "Continuous reward from -0.3 up to 1.0 based on classification accuracy, priority, and action."
-  range: [-1.0, 1.0]
+description: >
+  OpenEnv environment where AI agents learn to classify and triage emails
+  across three difficulty levels using LLM-powered classification.
+
+tags:
+  - email-triage
+  - nlp
+  - classification
+  - real-world
+  - openenv
+
 tasks:
-  - id: "easy_eval"
-    level: "easy"
-  - id: "medium_eval"
-    level: "medium"
-  - id: "hard_eval"
-    level: "hard"
+  - id: easy
+    name: "Basic Email Classification"
+    difficulty: easy
+    max_steps: 5
+    reward_range: [0.01, 0.99]
+    success_threshold: 0.70
+
+  - id: medium
+    name: "Email Classification with Reasoning"
+    difficulty: medium
+    max_steps: 5
+    reward_range: [0.01, 0.99]
+    success_threshold: 0.60
+
+  - id: hard
+    name: "Full Email Triage"
+    difficulty: hard
+    max_steps: 5
+    reward_range: [0.01, 0.99]
+    success_threshold: 0.50
+
+observation_space:
+  type: object
+  fields:
+    id: integer
+    sender: string
+    subject: string
+    body: string
+
+action_space:
+  type: object
+  fields:
+    label: "spam | work | personal (easy/medium)"
+    category: "spam | work | personal (hard)"
+    priority: "low | medium | high (hard)"
+    action: "ignore | reply | escalate (hard)"
+
+reward_space:
+  type: float
+  range: [0.01, 0.99]
+  description: "Partial credit based on classification accuracy"
+
+endpoints:
+  reset: "/reset"
+  step:  "/step"
+  state: "/state"
+
+server:
+  port: 7860
+  framework: flask
