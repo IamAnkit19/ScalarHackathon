@@ -1,6 +1,18 @@
 import os
 import requests
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    print("[START]", flush=True)
+    print("task=error", flush=True)
+    print("env=error", flush=True)
+    print("model=error", flush=True)
+    print("[END]", flush=True)
+    print("success=False", flush=True)
+    print("steps=0", flush=True)
+    print("score=0.0", flush=True)
+    print("rewards=[]", flush=True)
+    exit(0)
 
 # ✅ LLM Proxy Config (MANDATORY)
 API_BASE_URL = os.environ["API_BASE_URL"]
