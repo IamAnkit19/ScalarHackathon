@@ -1,63 +1,64 @@
-"""
-agents/classifier.py — Email classification agent.
-Uses the OpenAI client pointed at API_BASE_URL (LiteLLM proxy).
-"""
-from __future__ import annotations
+# agents/classifier.py
+# Claude-powered email classification agent
 
 import json
-import os
-
-from openai import OpenAI
-
+import anthropic
 from data.prompts import PROMPTS
 
 
 class EmailClassifierAgent:
     """
-    AI agent that classifies emails using the LiteLLM proxy.
-    Initialised with the injected API_BASE_URL and API_KEY.
+    AI Agent that classifies emails using Claude.
+
+    Wraps the Anthropic API and handles:
+      - Prompt construction
+      - API call
+      - JSON parsing + fallback
     """
 
-    def __init__(self, api_key: str = None, base_url: str = None):
-        self.base_url = base_url or os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
-        self.api_key  = api_key  or os.environ.get("API_KEY") or os.environ.get("HF_TOKEN", "")
-        self.model    = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
+    MODEL = "claude-sonnet-4-20250514"
 
-        # ← Always use OpenAI client pointed at LiteLLM proxy
-        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key)
+    def __init__(self, api_key: str):
+        self.client = anthropic.Anthropic(api_key=api_key)
 
     def classify(self, email: dict, level: str) -> dict:
-        prompt = PROMPTS[level].format(
-            subject=email.get("subject", ""),
-            body=email.get("body", ""),
-        )
-        try:
-            resp = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an AI email classifier. Reply with ONLY valid JSON."},
-                    {"role": "user",   "content": prompt},
-                ],
-                temperature=0.0,
-                max_tokens=300,
-            )
-            raw = (resp.choices[0].message.content or "{}").strip()
-            return self._parse(raw, level)
-        except Exception as exc:
-            print(f"  [LLM error] {exc}")
-            return self._fallback(level)
+        """
+        Send email to Claude and return structured classification.
 
+        Args:
+            email:  {"subject": str, "body": str, ...}
+            level:  "easy" | "medium" | "hard"
+
+        Returns:
+            Parsed JSON dict from Claude.
+        """
+        prompt = PROMPTS[level].format(
+            subject=email["subject"],
+            body=email["body"],
+        )
+
+        message = self.client.messages.create(
+            model=self.MODEL,
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        raw = message.content[0].text
+        return self._parse(raw, level)
+
+    # ── private ─────────────────────────────────────────────────────
     def _parse(self, raw: str, level: str) -> dict:
+        """Parse Claude's response; return safe fallback on failure."""
         try:
-            clean = raw.strip()
-            if clean.startswith("```"):
-                lines = clean.splitlines()
-                clean = "\n".join(lines[1:]).replace("```", "").strip()
+            clean = raw.strip().strip("```json").strip("```").strip()
             return json.loads(clean)
         except (json.JSONDecodeError, ValueError):
-            return self._fallback(level)
-
-    def _fallback(self, level: str) -> dict:
-        if level == "hard":
-            return {"category": "work", "priority": "medium", "action": "reply", "reason": "fallback"}
-        return {"label": "work", "reason": "fallback"}
+            # safe fallback so episode doesn't crash
+            if level == "hard":
+                return {
+                    "category": "work",
+                    "priority": "medium",
+                    "action": "reply",
+                    "reason": "parse error — fallback used",
+                }
+            return {"label": "work", "reason": "parse error — fallback used"}

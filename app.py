@@ -18,11 +18,11 @@ agent = None
 
 def get_agent():
     global agent
-    key = (os.getenv("API_KEY") or os.getenv("HF_TOKEN") or
-           os.getenv("ANTHROPIC_API_KEY", "")).strip()
-    base_url = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not key or key == "your_api_key_here":
+        raise ValueError("ANTHROPIC_API_KEY .env mein set nahi hai!")
     if agent is None:
-        agent = EmailClassifierAgent(api_key=key, base_url=base_url)
+        agent = EmailClassifierAgent(api_key=key)
     return agent
 
 
@@ -60,7 +60,7 @@ def reward_table(level):
 
 @app.route("/api/check")
 def check():
-    key = (os.getenv("API_KEY") or os.getenv("HF_TOKEN") or os.getenv("ANTHROPIC_API_KEY", "")).strip()
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     ok  = bool(key and key != "your_api_key_here")
     return jsonify({"server": "ok", "api_key_set": ok,
                     "preview": key[:14]+"..." if ok else "NOT SET"})
@@ -142,13 +142,15 @@ def startup_check():
     print("\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print("  ⚡ Email Classifier Agent")
     print("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    key = (os.getenv("API_KEY") or os.getenv("HF_TOKEN") or
-           os.getenv("ANTHROPIC_API_KEY", "")).strip()
-    base_url = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-    print(f"\n  ✓ API Key  : {key[:14]}..." if key else "\n  ⚠ API Key  : not set (using fallback)")
-    print(f"  ✓ Base URL : {base_url}")
+    key = os.getenv("ANTHROPIC_API_KEY","").strip()
+    if not key or key == "your_api_key_here":
+        print("\n  ❌ ERROR: API key .env mein nahi hai!")
+        print("     ANTHROPIC_API_KEY=sk-ant-... daalo\n")
+        sys.exit(1)
+    print(f"\n  ✓ API Key : {key[:14]}...")
+    # port = int(os.getenv("FLASK_PORT", 5000))
     port = 7860
-    print(f"  ✓ Server   : http://localhost:{port}")
+    print(f"  ✓ Server  : http://localhost:{port}")
     print("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
     return port
 
